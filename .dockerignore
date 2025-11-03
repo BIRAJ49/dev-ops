@@ -1,0 +1,8 @@
+.env
+node_modules
+logs
+drizzle
+npm-debug.log*
+.DS_Store
+coverage
+*.log
