@@ -7,6 +7,8 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.routes.js';
 import { securityMiddleware } from './middleware/security.middleware.js';
 const app = express();
+
+app.set('trust proxy', true);
 app.use(helmet());
 app.use(cors());
 app.use(express.json());

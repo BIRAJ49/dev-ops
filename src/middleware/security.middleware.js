@@ -10,6 +10,37 @@ const ROLE_LIMITS = {
 
 const RATE_LIMIT_INTERVAL = '60s';
 
+const getClientIp = (req) => {
+  const forwardedFor = req.headers['x-forwarded-for'];
+
+  if (Array.isArray(forwardedFor)) {
+    const first = forwardedFor[0]?.split(',')[0]?.trim();
+    if (first) return first;
+  }
+
+  if (typeof forwardedFor === 'string' && forwardedFor.length > 0) {
+    return forwardedFor.split(',')[0].trim();
+  }
+
+  return (
+    req.ip ??
+    req.socket?.remoteAddress ??
+    req.connection?.remoteAddress ??
+    '127.0.0.1'
+  );
+};
+
+const buildArcjetRequest = (req, ip) => ({
+  ip,
+  method: req.method,
+  protocol: req.protocol,
+  host: req.get?.('host') ?? req.headers.host,
+  path: req.originalUrl ?? req.url,
+  headers: req.headers,
+  cookies: req.cookies,
+  query: req.query,
+});
+
 const respondToDeniedDecision = (decision, res, message) => {
   if (decision.reason.isRateLimit()) {
     logger.warn('Arcjet rate limit triggered', {
@@ -38,7 +69,10 @@ const respondToDeniedDecision = (decision, res, message) => {
 };
 
 const protectRequest = async (client, req, res, message) => {
-  const decision = await client.protect(req);
+  const ip = getClientIp(req);
+  const arcjetRequest = buildArcjetRequest(req, ip);
+
+  const decision = await client.protect(arcjetRequest);
 
   if (decision.isDenied()) {
     respondToDeniedDecision(decision, res, message);
